@@ -122,6 +122,24 @@ const getAllEmp = () => {
     });
 };
 
+const addDept = () => {
+    inquirer.prompt([
+        {
+            type: 'input',
+            name: 'newDept',
+            message: "What is the name of the new department?"
+        },
+    ])
+    .then((answer) => {
+        const mysql = `INSERT INTO department (dep_name) VALUES (?)`;
+        db.query(mysql, answer.newDept, (error, response) => {
+            if (error) throw error;
+            console.log(answer.newDept + ' Department has been added!');
+        });
+        getAllDep();
+    });
+};
+
 // Listen for localhost
 app.listen(PORT, () =>
     console.log(`Example app listening at http://localhost:${PORT}`)
