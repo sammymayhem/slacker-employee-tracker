@@ -5,6 +5,8 @@ const conTable = require('console.table');
 
 // const api = require('./routes/index.js');
 const inquirer = require('inquirer');
+const { start } = require('repl');
+const { response } = require('express');
 
 const PORT = process.env.PORT || 3001;
 
@@ -27,57 +29,75 @@ const db = mysql.createConnection(
 
 
 const userPrompt = () => {
-    inquirer.prompt([
-        {
-            type: 'list',
-            name: 'userChoice',
-            message: "What would you like to do?",
-            choices: [
-                "View all departments",
-                "View all roles",
-                "View all employees",
-                "Add a department",
-                "Add a role",
-                "Add an employee",
-                "Update an employee role",
-                "Quit",
-            ]
-        }
-    ])
-        .then(empChoice => {
-            switch (empChoice.userChoice) {
-                case "View all departments":
-                    getAllDep();
-                    break;
-                case "View all roles":
-                    getAllRoles();
-                    break;
-                case "View all emplyees":
-                    getAllEmp();
-                    break;
-                case "Add a department":
-                    addDept();
-                    break;
-                case "Add a role":
-                    addRole();
-                    break;
-                case "Add an employee":
-                    addEmp();
-                    break;
-                case "Update an employee role":
-                    updateEmp();
-                    break;
-                case "Quit":
-                    quitDb();
-                    break;
-                default:
-                    userPrompt();
+        inquirer.prompt([
+            {
+                type: 'list',
+                name: 'userChoice',
+                message: "What would you like to do?",
+                choices: [
+                    "View all departments",
+                    "View all roles",
+                    "View all employees",
+                    "Add a department",
+                    "Add a role",
+                    "Add an employee",
+                    "Update an employee role",
+                    "Quit",
+                ]
             }
-        });
-
-}
+        ])
+            .then(empChoice => {
+                switch (empChoice.userChoice) {
+                    case "View all departments":
+                        getAllDep();
+                        break;
+                    case "View all roles":
+                        getAllRoles();
+                        break;
+                    case "View all emplyees":
+                        getAllEmp();
+                        break;
+                    case "Add a department":
+                        addDept();
+                        break;
+                    case "Add a role":
+                        addRole();
+                        break;
+                    case "Add an employee":
+                        addEmp();
+                        break;
+                    case "Update an employee role":
+                        updateEmp();
+                        break;
+                    case "Quit":
+                        db.end();
+                        console.log(`Thank you for using the Slacker Employee Tracker!`)
+                }
+            });
+        };
 userPrompt();
 
+// Lists all Departments
+const getAllDep = () => {
+    const mysql = `SELECT department.id AS id, department.dep_name AS department FROM department;`;
+    db.query (mysql, (error, response) => {
+        if (error) throw error;
+        console.table(response);
+        userPrompt();
+    });
+};
+
+// List all Roles
+const getAllRoles = () => {
+    const mysql = `SELECT roles.id, roles.title, department.dep_name, roles.salary AS department FROM roles INNER JOIN department ON roles.department_id = department.id;`;
+    db.query (mysql, (error, response) => {
+        if (error) throw error;
+        console.table(response);
+        userPrompt();
+    });
+};
+
+// Listen for localhost
 app.listen(PORT, () =>
     console.log(`Example app listening at http://localhost:${PORT}`)
 );
