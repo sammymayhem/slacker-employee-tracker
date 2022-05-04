@@ -248,13 +248,13 @@ const updateEmp = () => {
     db.query(mysql, (error, response) => {
         if (error) throw error;
         let empArray = [];
-        response.forEach((employee) => { empArray.push(`${employee.first_name} ${employee.last_name}`); });
-
+        response.forEach((employee) => { empArray.push({ name: employee.first_name + " " + employee.last_name, value: employee.id }) });
+        console.log(empArray);
         const mysqlR = `SELECT roles.id, roles.title FROM roles;`;
         db.query(mysqlR, (error, response) => {
             if (error) throw error;
             let rolesArray = [];
-            response.forEach((roles) => { rolesArray.push(roles.title); });
+            response.forEach((roles) => { rolesArray.push({ name: roles.title, value: roles.id }); });
 
             inquirer.prompt([
                 {
@@ -271,22 +271,11 @@ const updateEmp = () => {
                 }
             ])
                 .then((answer) => {
-                    let newRoleId;
-                    let empId;
-                    response.forEach((roles) => {
-                        if (answer.roleChoice === roles.title) {
-                            newRoleId = roles.id;
-                        }
-                    });
-                    response.forEach((employee) => {
-                        if (answer.empChoice === `${employee.first_name} ${employee.last_name}`) {
-                            empId = employee.id;
-                        }
-                    });
                     const mysqlU = `UPDATE employee 
                                     SET employee.role_id = (?) 
                                     WHERE employee.id = (?);`;
-                    db.query(mysqlU, [newRoleId, empId], (error) => {
+
+                    db.query(mysqlU, [answer.roleChoice, answer.empChoice], (error) => {
                         if (error) throw error;
                         console.log(`Employee role updated!`)
                         userPrompt();
