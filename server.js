@@ -1,6 +1,5 @@
 const express = require('express');
 const mysql = require('mysql2');
-const figlet = require('figlet');
 const conTable = require('console.table');
 
 // const api = require('./routes/index.js');
@@ -74,7 +73,6 @@ const userPrompt = () => {
             }
         });
 };
-userPrompt();
 
 // Lists all Departments
 const getAllDep = () => {
@@ -105,17 +103,18 @@ const getAllRoles = () => {
 
 // List all Employees
 const getAllEmp = () => {
-    const mysql = `SELECT employee.id,
-                   employee.first_name AS First,
-                   employee.last_name AS Last,
-                   roles.title AS Title,
-                   department.dep_name AS Department,
-                   roles.salary AS Salary,
-                   employee.manager_id AS Manager
-                   FROM employee, roles, department
-                   WHERE department.id = roles.department_id
-                   AND roles.id = employee.role_id
-                   ORDER BY employee.id ASC;`;
+    const mysql = `SELECT employee.id AS ID,
+                    employee.first_name AS First,
+                    employee.last_name AS Last,
+                    roles.title AS Title,
+                    department.dep_name AS Department,
+                    roles.salary AS Salary,
+                    CONCAT(manager.first_name, ' ' ,manager.last_name) AS Manager
+                    FROM employee
+                    LEFT JOIN roles ON employee.role_id = roles.id
+                    LEFT JOIN department ON roles.department_id = department.id
+                    LEFT JOIN employee AS manager ON employee.manager_id = manager.id
+                    ORDER By employee.id;`;
     db.query(mysql, (error, response) => {
         if (error) throw error;
         console.table("\n", response, "\n");
@@ -174,49 +173,49 @@ const addEmp = () => {
             message: "What is the new employees last name?"
         },
     ])
-    .then(answer => {
-        const newEmp = [answer.first_name, answer.last_name]
-        const mysqlR = `SELECT roles.id, roles.title FROM roles;`;
-        db.query(mysqlR, (error, response) => {
-            if(error) throw error;
-            const roleList = response.map(({ id, title }) => ({ name: title, value: id }));
-            inquirer.prompt([
-                {
-                    type: 'list',
-                    name: 'title',
-                    message: "What is this employee's role?",
-                    choices: roleList
-                }
-            ])
-            .then(roleChoice => {
-                const title = roleChoice.title;
-                newEmp.push(title);
-                const mysqlM = `SELECT * FROM employee;`;
-                db.query(mysqlM, (error, boss) => {
-                    if(error) throw error;
-                    const managerList = boss.map(({ id, first_name, last_name}) => ({ name: first_name + " " + last_name, value: id }));
-                    inquirer.prompt([
-                        {
-                            type: 'list',
-                            name: 'manager',
-                            message: "Who will this employee's manager be?",
-                            choices: managerList
-                        }
-                    ])
-                    .then(managerChoice => {
-                        const mngr = managerChoice.manager;
-                        newEmp.push(mngr);
-                        const mysql = `INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES (?, ?, ?, ?);`;
-                        db.query(mysql, newEmp, (error) => {
-                            if(error) throw error;
-                            console.log("\n", `New employee has been added!`, "\n")
-                            userPrompt();
+        .then(answer => {
+            const newEmp = [answer.first_name, answer.last_name]
+            const mysqlR = `SELECT roles.id, roles.title FROM roles;`;
+            db.query(mysqlR, (error, response) => {
+                if (error) throw error;
+                const roleList = response.map(({ id, title }) => ({ name: title, value: id }));
+                inquirer.prompt([
+                    {
+                        type: 'list',
+                        name: 'title',
+                        message: "What is this employee's role?",
+                        choices: roleList
+                    }
+                ])
+                    .then(roleChoice => {
+                        const title = roleChoice.title;
+                        newEmp.push(title);
+                        const mysqlM = `SELECT * FROM employee;`;
+                        db.query(mysqlM, (error, boss) => {
+                            if (error) throw error;
+                            const managerList = boss.map(({ id, first_name, last_name }) => ({ name: first_name + " " + last_name, value: id }));
+                            inquirer.prompt([
+                                {
+                                    type: 'list',
+                                    name: 'manager',
+                                    message: "Who will this employee's manager be?",
+                                    choices: managerList
+                                }
+                            ])
+                                .then(managerChoice => {
+                                    const mngr = managerChoice.manager;
+                                    newEmp.push(mngr);
+                                    const mysql = `INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES (?, ?, ?, ?);`;
+                                    db.query(mysql, newEmp, (error) => {
+                                        if (error) throw error;
+                                        console.log("\n", `New employee has been added!`, "\n")
+                                        userPrompt();
+                                    });
+                                });
                         });
                     });
-                });
             });
         });
-    });
 };
 
 // Add a department to the department table
@@ -239,17 +238,23 @@ const addDept = () => {
 };
 
 const updateEmp = () => {
-    const mysql = `SELECT employee.id, employee.first_name, employee.last_name, roles.id AS      "role_id" FROM employee, roles, department WHERE department.id = roles.department_id AND roles.id = employee.role_id;`;
+    const mysql = `SELECT employee.id, 
+                    employee.first_name, 
+                    employee.last_name, 
+                    roles.id AS "role_id" 
+                    FROM employee, roles, department 
+                    WHERE department.id = roles.department_id 
+                    AND roles.id = employee.role_id;`;
     db.query(mysql, (error, response) => {
-        if(error) throw error;
+        if (error) throw error;
         let empArray = [];
-        response.forEach((employee) => {empArray.push(`${employee.first_name} ${employee.last_name}`);});
+        response.forEach((employee) => { empArray.push(`${employee.first_name} ${employee.last_name}`); });
 
         const mysqlR = `SELECT roles.id, roles.title FROM roles;`;
         db.query(mysqlR, (error, response) => {
-            if(error) throw error;
+            if (error) throw error;
             let rolesArray = [];
-            response.forEach((roles) => {rolesArray.push(roles.title);});
+            response.forEach((roles) => { rolesArray.push(roles.title); });
 
             inquirer.prompt([
                 {
@@ -265,31 +270,33 @@ const updateEmp = () => {
                     choices: rolesArray
                 }
             ])
-            .then((answer) => {
-                let newRoleID;
-                let empId;
-                response.forEach((roles) => {
-                    if (answer.roleChoice === roles.title) {
-                        newRoleID = roles.id;
-                    }
+                .then((answer) => {
+                    let newRoleId;
+                    let empId;
+                    response.forEach((roles) => {
+                        if (answer.roleChoice === roles.title) {
+                            newRoleId = roles.id;
+                        }
+                    });
+                    response.forEach((employee) => {
+                        if (answer.empChoice === `${employee.first_name} ${employee.last_name}`) {
+                            empId = employee.id;
+                        }
+                    });
+                    const mysqlU = `UPDATE employee 
+                                    SET employee.role_id = (?) 
+                                    WHERE employee.id = (?);`;
+                    db.query(mysqlU, [newRoleId, empId], (error) => {
+                        if (error) throw error;
+                        console.log(`Employee role updated!`)
+                        userPrompt();
+                    });
                 });
-                response.forEach((employee) => {
-                    if (answer.empChoice === `${employee.first_name} ${employee.last_name}`) {
-                        empId = employee.id;
-                    }
-                });
-                const mysqlU = `UPDATE employee SET employee.role_id = ? WHERE employee.id = ?;`;
-                db.query(mysqlU, [newRoleID, empId], (error) => {
-                    if(error) throw error;
-                    console.log(`Employee role updated!`)
-                    userPrompt();
-                })
-            })
-        })
-    })
+        });
+    });
 };
 
-
+userPrompt();
 
 
 // Listen for localhost
