@@ -238,6 +238,57 @@ const addDept = () => {
         });
 };
 
+const updateEmp = () => {
+    const mysql = `SELECT employee.id, employee.first_name, employee.last_name, roles.id AS      "role_id" FROM employee, roles, department WHERE department.id = roles.department_id AND roles.id = employee.role_id;`;
+    db.query(mysql, (error, response) => {
+        if(error) throw error;
+        let empArray = [];
+        response.forEach((employee) => {empArray.push(`${employee.first_name} ${employee.last_name}`);});
+
+        const mysqlR = `SELECT roles.id, roles.title FROM roles;`;
+        db.query(mysqlR, (error, response) => {
+            if(error) throw error;
+            let rolesArray = [];
+            response.forEach((roles) => {rolesArray.push(roles.title);});
+
+            inquirer.prompt([
+                {
+                    type: 'list',
+                    name: 'empChoice',
+                    message: "Which employee's role are we updating?",
+                    choices: empArray
+                },
+                {
+                    type: 'list',
+                    name: 'roleChoice',
+                    message: "What is their new role?",
+                    choices: rolesArray
+                }
+            ])
+            .then((answer) => {
+                let newRoleID;
+                let empId;
+                response.forEach((roles) => {
+                    if (answer.roleChoice === roles.title) {
+                        newRoleID = roles.id;
+                    }
+                });
+                response.forEach((employee) => {
+                    if (answer.empChoice === `${employee.first_name} ${employee.last_name}`) {
+                        empId = employee.id;
+                    }
+                });
+                const mysqlU = `UPDATE employee SET employee.role_id = ? WHERE employee.id = ?;`;
+                db.query(mysqlU, [newRoleID, empId], (error) => {
+                    if(error) throw error;
+                    console.log(`Employee role updated!`)
+                    userPrompt();
+                })
+            })
+        })
+    })
+};
+
 
 
 
