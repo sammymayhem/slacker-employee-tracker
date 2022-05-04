@@ -161,6 +161,64 @@ const addRole = () => {
     });
 };
 
+const addEmp = () => {
+    inquirer.prompt([
+        {
+            type: 'input',
+            name: 'first_name',
+            message: "What is the new employee's first name?"
+        },
+        {
+            type: 'input',
+            name: 'last_name',
+            message: "What is the new employees last name?"
+        },
+    ])
+    .then(answer => {
+        const newEmp = [answer.first_name, answer.last_name]
+        const mysqlR = `SELECT roles.id, roles.title FROM roles;`;
+        db.query(mysqlR, (error, response) => {
+            if(error) throw error;
+            const roleList = response.map(({ id, title }) => ({ name: title, value: id }));
+            inquirer.prompt([
+                {
+                    type: 'list',
+                    name: 'title',
+                    message: "What is this employee's role?",
+                    choices: roleList
+                }
+            ])
+            .then(roleChoice => {
+                const title = roleChoice.title;
+                newEmp.push(title);
+                const mysqlM = `SELECT * FROM employee;`;
+                db.query(mysqlM, (error, boss) => {
+                    if(error) throw error;
+                    const managerList = boss.map(({ id, first_name, last_name}) => ({ name: first_name + " " + last_name, value: id }));
+                    inquirer.prompt([
+                        {
+                            type: 'list',
+                            name: 'manager',
+                            message: "Who will this employee's manager be?",
+                            choices: managerList
+                        }
+                    ])
+                    .then(managerChoice => {
+                        const mngr = managerChoice.manager;
+                        newEmp.push(mngr);
+                        const mysql = `INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES (?, ?, ?, ?);`;
+                        db.query(mysql, newEmp, (error) => {
+                            if(error) throw error;
+                            console.log("\n", `New employee has been added!`, "\n")
+                            userPrompt();
+                        });
+                    });
+                });
+            });
+        });
+    });
+};
+
 // Add a department to the department table
 const addDept = () => {
     inquirer.prompt([
