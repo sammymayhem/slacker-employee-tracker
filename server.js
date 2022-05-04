@@ -5,6 +5,7 @@ const conTable = require('console.table');
 
 // const api = require('./routes/index.js');
 const inquirer = require('inquirer');
+const { response } = require('express');
 
 const PORT = process.env.PORT || 3001;
 
@@ -93,8 +94,9 @@ const getAllRoles = () => {
                    roles.salary AS salary 
                    FROM roles 
                    INNER JOIN department 
-                   ON roles.department_id = department.id;`;
-    db.promise().query(mysql, (error, response) => {
+                   ON roles.department_id = department.id
+                   ORDER BY roles.id ASC;`;
+    db.query(mysql, (error, response) => {
         if (error) throw error;
         console.table("\n", response, "\n");
         userPrompt();
@@ -121,61 +123,67 @@ const getAllEmp = () => {
     });
 };
 
+// Add a role to the roles table
 const addRole = () => {
-    const mysql = `SELECT department.id AS id, department.dep_name AS department FROM department;`;
-    db.query(mysql, (error, response) => {
+    const mysql = `SELECT * FROM department;`;
+    db.query(mysql, (error, departments) => {
         if (error) throw error;
-        console.table(response);
+        let deptList = departments.map(department => ({
+            name: department.dep_name,
+            value: department.id
+        }))
         inquirer.prompt([
             {
                 type: 'input',
-                name: 'deptId',
-                message: "What is the Department ID # this roles belongs to?"
+                name: 'title',
+                message: "What is the name of the role you would like to add?"
             },
             {
                 type: 'input',
-                name: 'newRole',
-                message: "What is the title of the new role?"
+                name: 'salary',
+                message: "What is the salary for this role?"
             },
             {
-                type: 'input',
-                name: 'newSalray',
-                message: "What is the salary of the new role?"
+                type: 'list',
+                name: 'department_id',
+                message: "What department does this role belong to?",
+                choices: deptList
             }
         ])
-        .then((answer) => {
-            const newRole = answer.newRole;
-            const newDeptId = answer.deptId;
-            const newSalray = answer.newSalray;
-            const mysql = `INSERT INTO roles (title, salary, department_id) VALUES ("${newRole}", "${newSalray}", "${newDeptId}")`;
-            db.query(mysql, (error, response) => {
-                if(error) throw error;
-                console.log("\n", newRole + " has been added!", "\n");
+            .then(role => {
+                const mysql = `INSERT INTO roles SET ?;`;
+                db.query(mysql, role, (error, reponse) => {
+                    if (error) throw error;
+                    console.log("\n", `New role has been added!`, "\n");
+                });
                 userPrompt();
-            })
-        });
+            });
     });
 };
-    const addDept = () => {
-        inquirer.prompt([
-            {
-                type: 'input',
-                name: 'newDept',
-                message: "What is the name of the new department?"
-            },
-        ])
-            .then((answer) => {
-                const mysql = `INSERT INTO department (dep_name) VALUES (?)`;
-                db.query(mysql, answer.newDept, (error, response) => {
-                    if (error) throw error;
-                    console.log("\n", answer.newDept + ' Department has been added!', "\n");
-                });
-                getAllDep();
+
+// Add a department to the department table
+const addDept = () => {
+    inquirer.prompt([
+        {
+            type: 'input',
+            name: 'newDept',
+            message: "What is the name of the new department?"
+        },
+    ])
+        .then((answer) => {
+            const mysql = `INSERT INTO department (dep_name) VALUES (?)`;
+            db.query(mysql, answer.newDept, (error, response) => {
+                if (error) throw error;
+                console.log("\n", answer.newDept + ' Department has been added!', "\n");
             });
-    };
+            getAllDep();
+        });
+};
 
 
-    // Listen for localhost
-    app.listen(PORT, () =>
-        console.log(`Example app listening at http://localhost:${PORT}`)
-    );
+
+
+// Listen for localhost
+app.listen(PORT, () =>
+    console.log(`Example app listening at http://localhost:${PORT}`)
+);
